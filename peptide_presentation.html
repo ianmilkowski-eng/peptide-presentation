@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Peptide Presentation | Ian Milkowski</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { width:100vw; height:100vh; overflow:hidden; font-family:Georgia,serif; background:#020b12; }
+
+    @keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+    @keyframes glowPulse { 0%,100%{opacity:.15} 50%{opacity:.3} }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
+
+    #app { width:100vw; height:100vh; display:flex; flex-direction:column; position:relative; overflow:hidden; transition:background .8s ease; }
+    .glow1,.glow2 { position:absolute; inset:0; pointer-events:none; transition:background .8s ease; }
+    .glow1 { animation:glowPulse 4s ease infinite; }
+    .deco-symbol { position:absolute; right:-40px; top:50%; transform:translateY(-50%); font-size:420px; opacity:.03; line-height:1; pointer-events:none; user-select:none; font-family:serif; transition:color .8s ease; }
+
+    #top-bar { display:flex; align-items:center; justify-content:space-between; padding:20px 36px; position:relative; z-index:10; }
+    #dots { display:flex; gap:8px; align-items:center; }
+    .dot { height:8px; border-radius:4px; cursor:pointer; transition:all .3s ease; }
+    .dot:hover { transform:scale(1.3); }
+    #timer-cluster { display:flex; align-items:center; gap:16px; }
+    .timer-block { display:flex; flex-direction:column; align-items:flex-end; }
+    .timer-label { font-family:'Space Mono',monospace; font-size:11px; letter-spacing:.15em; color:rgba(255,255,255,.3); margin-bottom:2px; }
+    .timer-value { font-family:'Space Mono',monospace; font-size:20px; font-weight:700; letter-spacing:.05em; transition:color .3s; }
+    .timer-divider { width:1px; height:32px; background:rgba(255,255,255,.1); }
+
+    #slide-content { flex:1; display:flex; position:relative; z-index:5; padding:0 5% 0 10%; }
+    #text-col { flex:1; display:flex; flex-direction:column; justify-content:center; padding-right:20px; }
+    #anim-col { width:320px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+
+    .slide-tag { font-family:'Space Mono',monospace; font-size:11px; letter-spacing:.25em; font-weight:700; margin-bottom:20px; display:flex; align-items:center; gap:10px; animation:fadeIn .5s ease both .05s; }
+    .tag-line { width:24px; height:1px; opacity:.6; }
+    .tag-time { color:rgba(255,255,255,.25); font-weight:400; }
+    .slide-headline { font-family:'Playfair Display',Georgia,serif; font-size:clamp(36px,5.5vw,68px); font-weight:900; color:#fff; line-height:1.05; letter-spacing:-.02em; margin-bottom:12px; animation:fadeUp .6s cubic-bezier(.16,1,.3,1) both .1s; }
+    .slide-sub { font-family:'Playfair Display',Georgia,serif; font-size:clamp(15px,2.2vw,22px); font-weight:400; font-style:italic; opacity:.85; margin-bottom:26px; line-height:1.3; animation:fadeUp .6s cubic-bezier(.16,1,.3,1) both .2s; }
+    .divider { width:60px; height:1px; margin-bottom:22px; opacity:.6; }
+    #chips { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px; animation:fadeUp .6s cubic-bezier(.16,1,.3,1) both .3s; }
+    .chip { font-family:'Space Mono',monospace; font-size:11px; letter-spacing:.08em; color:rgba(255,255,255,.55); padding:4px 10px; border:1px solid rgba(255,255,255,.1); border-radius:3px; background:rgba(255,255,255,.04); }
+    #facts { display:flex; flex-direction:column; gap:8px; margin-bottom:16px; animation:fadeUp .6s cubic-bezier(.16,1,.3,1) both .35s; }
+    .fact-row { display:flex; align-items:flex-start; gap:10px; }
+    .fact-dot { width:4px; height:4px; border-radius:50%; margin-top:8px; flex-shrink:0; opacity:.7; }
+    .fact-text { font-family:Georgia,serif; font-size:clamp(12px,1.3vw,14px); color:rgba(255,255,255,.6); line-height:1.5; }
+    #stat-block { display:flex; align-items:baseline; gap:14px; padding:14px 18px; border-radius:0 6px 6px 0; max-width:520px; animation:fadeUp .6s cubic-bezier(.16,1,.3,1) both .4s; }
+    .stat-text { font-family:'Playfair Display',Georgia,serif; font-size:clamp(13px,1.7vw,17px); color:rgba(255,255,255,.9); line-height:1.4; flex:1; }
+    .stat-src { font-family:'Space Mono',monospace; font-size:10px; letter-spacing:.1em; opacity:.7; white-space:nowrap; }
+
+    #bottom-bar { padding:14px 36px 18px; display:flex; align-items:center; justify-content:space-between; position:relative; z-index:10; }
+    #progress-track { flex:1; max-width:200px; height:2px; background:rgba(255,255,255,.08); border-radius:1px; }
+    #progress-fill { height:100%; border-radius:1px; transition:width 1s linear; }
+    #controls { display:flex; gap:12px; align-items:center; }
+    .ctrl-btn { background:none; border:1px solid rgba(255,255,255,.12); border-radius:4px; padding:7px 16px; font-family:'Space Mono',monospace; font-size:12px; letter-spacing:.1em; cursor:pointer; transition:all .2s; color:rgba(255,255,255,.5); }
+    .ctrl-btn:hover { filter:brightness(1.3); }
+    .ctrl-btn:disabled { color:rgba(255,255,255,.15); cursor:default; filter:none; }
+    #main-btn { border-radius:4px; padding:8px 24px; font-family:'Space Mono',monospace; font-size:12px; font-weight:700; letter-spacing:.15em; cursor:pointer; transition:all .2s; }
+    .spacer { width:200px; }
+    .anim-wrap { width:100%; height:100%; display:flex; align-items:center; justify-content:center; animation:fadeIn .8s ease both .3s; }
+  </style>
+</head>
+<body>
+<div id="app">
+  <div class="glow1" id="glow1"></div>
+  <div class="glow2" id="glow2"></div>
+  <div class="deco-symbol" id="deco"></div>
+
+  <div id="top-bar">
+    <div id="dots"></div>
+    <div id="timer-cluster">
+      <div class="timer-block"><div class="timer-label">SLIDE</div><div class="timer-value" id="slide-timer">0:45</div></div>
+      <div class="timer-divider"></div>
+      <div class="timer-block"><div class="timer-label">TOTAL</div><div class="timer-value" id="total-timer">6:00</div></div>
+    </div>
+  </div>
+
+  <div id="slide-content">
+    <div id="text-col">
+      <div class="slide-tag" id="slide-tag">
+        <div class="tag-line" id="tag-line"></div>
+        <span id="tag-label"></span>
+        <span class="tag-time" id="tag-time"></span>
+      </div>
+      <h1 class="slide-headline" id="headline"></h1>
+      <p class="slide-sub" id="sub"></p>
+      <div class="divider" id="divider"></div>
+      <div id="chips"></div>
+      <div id="facts"></div>
+      <div id="stat-block">
+        <div class="stat-text" id="stat-text"></div>
+        <div class="stat-src" id="stat-src"></div>
+      </div>
+    </div>
+    <div id="anim-col"></div>
+  </div>
+
+  <div id="bottom-bar">
+    <div id="progress-track"><div id="progress-fill"></div></div>
+    <div id="controls">
+      <button class="ctrl-btn" id="prev-btn" onclick="prevSlide()">PREV</button>
+      <button id="main-btn" onclick="mainAction()">START</button>
+      <button class="ctrl-btn" id="next-btn" onclick="nextSlide()">NEXT</button>
+    </div>
+    <div class="spacer"></div>
+  </div>
+</div>
+
+<script>
+const slides = [
+  {
+    tag:"INTRO", time:"0:00 - 0:45", duration:45,
+    headline:"How Peptides Bind to Receptors",
+    sub:"to Trigger Biological Change",
+    detail:["7,000 peptides in your body right now"],
+    facts:[], stat:null, statSrc:null, animType:"peptidechain",
+    accent:"#e8f4f8", glow:"#00c8ff",
+    bg:"linear-gradient(160deg,#020b12 0%,#041824 100%)", symbol:"⬡",
+  },
+  {
+    tag:"KEY POINT 01", time:"0:45 - 2:15", duration:90,
+    headline:"Metabolic Change",
+    sub:"Lock and Key: one peptide, three receptors",
+    detail:["Retatrutide","GLP-1","GIP","Glucagon"],
+    facts:[
+      "All three receptors firing at once creates a compounding effect impossible with a single-target drug",
+      "Ozempic only activates GLP-1. Retatrutide hits all three simultaneously.",
+    ],
+    stat:"17.5% body weight lost in 24 weeks",
+    statSrc:"NEJM 2023",
+    animType:"lockkey",
+    accent:"#d4f5d4", glow:"#39ff14",
+    bg:"linear-gradient(160deg,#021202 0%,#071a07 100%)", symbol:"◈",
+  },
+  {
+    tag:"KEY POINT 02", time:"2:15 - 3:45", duration:90,
+    headline:"Tissue Repair",
+    sub:"New blood vessels grown at the injury site",
+    detail:["BPC-157","Angiogenesis","VEGF Upregulation"],
+    facts:[
+      "Triggers nitric oxide production, widening vessels so more oxygen reaches damaged tissue",
+      "Healing happens at a structural level, not just pain relief, but physical rebuilding",
+    ],
+    stat:"Stimulates vessel growth in muscle and tendon",
+    statSrc:"Brcic et al. 2009",
+    animType:"vessels",
+    accent:"#fde8d8", glow:"#ff6b35",
+    bg:"linear-gradient(160deg,#120500 0%,#1a0a03 100%)", symbol:"◉",
+  },
+  {
+    tag:"KEY POINT 03", time:"3:45 - 5:15", duration:90,
+    headline:"Gene Activation",
+    sub:"Straight to the nucleus, not the surface",
+    detail:["GHK-Cu","Collagen","Elastin","Cell Reset"],
+    facts:[
+      "Also activates genes that fight cellular damage, not just cosmetic, it repairs at the DNA level",
+      "Unlike surface skincare, it tells your cells to rebuild themselves from the inside out",
+    ],
+    stat:"4,000 human genes activated",
+    statSrc:"Pickart et al. 2015",
+    animType:"skin",
+    accent:"#ede0ff", glow:"#bf5fff",
+    bg:"linear-gradient(160deg,#08021a 0%,#0d0420 100%)", symbol:"✦",
+  },
+  {
+    tag:"CLOSE", time:"5:15 - 6:00", duration:45,
+    headline:"Three Outcomes.",
+    sub:"One Process.",
+    detail:["Peptides speak the body's own language"],
+    facts:[], stat:null, statSrc:null, animType:"triple",
+    accent:"#e8f4f8", glow:"#00c8ff",
+    bg:"linear-gradient(160deg,#020b12 0%,#041824 100%)", symbol:"⬡",
+  },
+];
+
+let current=0, started=false, running=false;
+let slideTime=slides[0].duration, totalTime=360, interval=null, animFrame=null;
+
+function fmt(s){ return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
+
+// LOCK AND KEY
+function runLockKey(canvas){
+  const ctx=canvas.getContext('2d');
+  const W=canvas.width, H=canvas.height;
+  let t=0;
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    const cx=W/2, cy=H/2;
+    const wave=Math.sin(t*0.02);
+    const inserted=Math.min(1,Math.max(0,(wave+1)/2));
+    const unlocked=wave>0.6;
+    const keyX=cx-80+inserted*58;
+
+    // KEY
+    ctx.save();
+    ctx.translate(keyX, cy+6);
+    ctx.shadowColor='#39ff14'; ctx.shadowBlur=14;
+    // bow
+    ctx.beginPath(); ctx.arc(-36,0,15,0,Math.PI*2);
+    ctx.strokeStyle='#39ff14'; ctx.lineWidth=3; ctx.stroke();
+    ctx.beginPath(); ctx.arc(-36,0,7,0,Math.PI*2);
+    ctx.strokeStyle='rgba(57,255,20,0.4)'; ctx.lineWidth=2; ctx.stroke();
+    // shaft
+    ctx.beginPath(); ctx.moveTo(-21,0); ctx.lineTo(26,0);
+    ctx.strokeStyle='#39ff14'; ctx.lineWidth=4; ctx.stroke();
+    // teeth
+    [[8,9],[16,13],[22,7]].forEach(([x,h])=>{
+      ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,h);
+      ctx.strokeStyle='#39ff14'; ctx.lineWidth=3; ctx.stroke();
+    });
+    ctx.restore();
+
+    // LOCK
+    const lx=cx+60, ly=cy;
+    const alpha=0.3+inserted*0.6;
+    ctx.save();
+    ctx.translate(lx,ly);
+    ctx.shadowColor='#39ff14'; ctx.shadowBlur=unlocked?28:10;
+    // shackle
+    const lift=unlocked ? -14 : 0;
+    ctx.beginPath();
+    ctx.arc(0,-16+lift/2,13,Math.PI,0);
+    ctx.strokeStyle=`rgba(57,255,20,${alpha})`; ctx.lineWidth=3.5; ctx.stroke();
+    if(!unlocked){
+      ctx.beginPath(); ctx.moveTo(-13,-16); ctx.lineTo(-13,-6);
+      ctx.moveTo(13,-16); ctx.lineTo(13,-6);
+      ctx.strokeStyle=`rgba(57,255,20,${alpha})`; ctx.lineWidth=3.5; ctx.stroke();
+    }
+    // body
+    ctx.beginPath(); ctx.roundRect(-22,-8,44,36,5);
+    ctx.fillStyle=`rgba(57,255,20,${unlocked?0.15:0.06})`;
+    ctx.strokeStyle=`rgba(57,255,20,${alpha})`;
+    ctx.lineWidth=2.5; ctx.fill(); ctx.stroke();
+    // keyhole
+    ctx.beginPath(); ctx.arc(0,6,6,0,Math.PI*2);
+    ctx.fillStyle=`rgba(57,255,20,${0.15+inserted*0.5})`; ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-3,9); ctx.lineTo(3,9); ctx.lineTo(2,18); ctx.lineTo(-2,18);
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+
+    // label
+    ctx.shadowBlur=0;
+    ctx.font='bold 10px "Space Mono",monospace';
+    ctx.fillStyle='rgba(57,255,20,0.5)';
+    ctx.textAlign='center';
+    ctx.fillText(unlocked?'RECEPTOR ACTIVATED':'BINDING...', cx, cy+72);
+
+    t++;
+    animFrame=requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// BLOOD VESSELS
+function runVessels(canvas){
+  const ctx=canvas.getContext('2d');
+  const W=canvas.width, H=canvas.height;
+  const cx=W/2, cy=H/2+10;
+  let t=0;
+
+  function branch(x,y,angle,length,depth){
+    if(depth>5||length<5) return;
+    const growDelay=depth*22;
+    const progress=Math.min(1,Math.max(0,(t-growDelay)/50));
+    if(progress<=0) return;
+    const ex=x+Math.cos(angle)*length*progress;
+    const ey=y+Math.sin(angle)*length*progress;
+    const pulse=0.55+0.45*Math.sin(t*0.07+depth*0.8);
+    const alpha=progress*(0.45+0.45*pulse);
+    const lw=Math.max(0.5, 3.5-depth*0.55);
+    ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(ex,ey);
+    ctx.strokeStyle=`rgba(255,107,53,${alpha})`;
+    ctx.lineWidth=lw;
+    ctx.shadowColor='#ff6b35'; ctx.shadowBlur=lw*2.5;
+    ctx.stroke();
+    if(progress>=1){
+      branch(ex,ey,angle-0.42,length*0.68,depth+1);
+      branch(ex,ey,angle+0.48,length*0.64,depth+1);
+    }
+  }
+
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    const pulse=0.6+0.4*Math.sin(t*0.08);
+    // center
+    ctx.beginPath(); ctx.arc(cx,cy,6*pulse,0,Math.PI*2);
+    ctx.fillStyle='rgba(255,107,53,0.95)';
+    ctx.shadowColor='#ff6b35'; ctx.shadowBlur=18;
+    ctx.fill();
+
+    const roots=[
+      [-Math.PI/2,48],[Math.PI/6,44],[-Math.PI*5/6,44],
+      [Math.PI/2,40],[-Math.PI/6,44],[Math.PI*5/6,44],
+      [-Math.PI/3,42],[Math.PI/3,42],
+    ];
+    roots.forEach(([a,l])=>branch(cx,cy,a,l,0));
+
+    ctx.shadowBlur=0;
+    ctx.font='bold 10px "Space Mono",monospace';
+    ctx.fillStyle='rgba(255,107,53,0.5)';
+    ctx.textAlign='center';
+    ctx.fillText('ANGIOGENESIS', cx, cy+100);
+    t++;
+    animFrame=requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// SKIN REPAIR
+function runSkin(canvas){
+  const ctx=canvas.getContext('2d');
+  const W=canvas.width, H=canvas.height;
+  let t=0;
+
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    const cx=W/2;
+    const cycle=((t%300)/300);
+    const repair=Math.min(1,cycle*2.2);
+    const isRepaired=cycle>0.5;
+
+    // EPIDERMIS surface line
+    ctx.beginPath();
+    ctx.moveTo(W*0.08, H*0.3);
+    for(let x=W*0.08; x<=W*0.92; x+=2){
+      const roughness=isRepaired
+        ? Math.sin(x*0.15)*1.5*(1-Math.min(1,repair*0.95))
+        : Math.sin(x*0.11)*6+Math.sin(x*0.29)*3.5;
+      ctx.lineTo(x, H*0.3+roughness);
+    }
+    ctx.strokeStyle=`rgba(191,95,255,${0.45+repair*0.45})`;
+    ctx.lineWidth=2.5; ctx.shadowColor='#bf5fff'; ctx.shadowBlur=repair*14; ctx.stroke();
+
+    // surface label
+    ctx.shadowBlur=0;
+    ctx.font='bold 9px "Space Mono",monospace';
+    ctx.fillStyle='rgba(191,95,255,0.45)';
+    ctx.textAlign='left';
+    ctx.fillText('EPIDERMIS', W*0.08, H*0.26);
+
+    // DERMIS divider
+    ctx.beginPath();
+    ctx.moveTo(W*0.08,H*0.55); ctx.lineTo(W*0.92,H*0.55);
+    ctx.strokeStyle='rgba(191,95,255,0.2)';
+    ctx.lineWidth=1; ctx.shadowBlur=0; ctx.stroke();
+    ctx.fillStyle='rgba(191,95,255,0.35)';
+    ctx.fillText('DERMIS', W*0.08, H*0.52);
+
+    // COLLAGEN fibers building up
+    const numFibers=Math.floor(repair*14);
+    for(let i=0;i<numFibers;i++){
+      const fx=W*0.1+i*(W*0.8/14);
+      const fAlpha=Math.min(1,(repair*14-i)*0.5)*0.75;
+      const fh=H*0.07+repair*H*0.12;
+      ctx.beginPath();
+      ctx.moveTo(fx,H*0.55);
+      ctx.bezierCurveTo(fx-7,H*0.55-fh/2,fx+7,H*0.55-fh/2,fx,H*0.55-fh);
+      ctx.strokeStyle=`rgba(191,95,255,${fAlpha})`;
+      ctx.lineWidth=1.8; ctx.shadowColor='#bf5fff'; ctx.shadowBlur=fAlpha*10; ctx.stroke();
+    }
+    ctx.shadowBlur=0;
+    ctx.fillStyle=`rgba(191,95,255,${repair*0.6})`;
+    ctx.fillText('COLLAGEN FIBERS', W*0.08, H*0.75);
+
+    // GHK-Cu particles floating upward
+    for(let i=0;i<7;i++){
+      const spd=(i%3+1)*0.5;
+      const px=W*0.12+i*(W*0.76/6);
+      const py=H*0.68-((t*spd+i*50)%200)/200*(H*0.32);
+      const pa=Math.sin(((t*spd+i*50)%200)/200*Math.PI)*0.85;
+      ctx.beginPath(); ctx.arc(px,py,2.5,0,Math.PI*2);
+      ctx.fillStyle=`rgba(191,95,255,${pa})`;
+      ctx.shadowColor='#bf5fff'; ctx.shadowBlur=8; ctx.fill();
+    }
+
+    // status label
+    ctx.shadowBlur=0;
+    ctx.textAlign='center';
+    ctx.font='bold 10px "Space Mono",monospace';
+    ctx.fillStyle='rgba(191,95,255,0.55)';
+    ctx.fillText(isRepaired?'CELLS REBUILDING':'GHK-Cu BINDING', cx, H*0.9);
+
+    t++;
+    animFrame=requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// PEPTIDE CHAIN (INTRO)
+function runPeptideChain(canvas){
+  const ctx=canvas.getContext('2d');
+  const W=canvas.width, H=canvas.height;
+  let t=0;
+  const BEADS=10;
+  const labels=['GLY','ALA','VAL','LEU','PRO','SER','THR','CYS','MET','PHE'];
+  const colors=['#00c8ff','#00aadd','#00e5ff','#00c8ff','#00bbee','#00d9ff','#00c8ff','#00aadd','#00e5ff','#00bbee'];
+
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    const cx=W/2, cy=H/2;
+
+    // chain path: sinusoidal
+    const beadPositions=[];
+    for(let i=0;i<BEADS;i++){
+      const frac=i/(BEADS-1);
+      const x=W*0.1+frac*W*0.8;
+      const y=cy+Math.sin(frac*Math.PI*2+t*0.025)*28+Math.sin(frac*Math.PI+t*0.018)*12;
+      beadPositions.push({x,y,label:labels[i],color:colors[i]});
+    }
+
+    // bonds between beads
+    for(let i=0;i<BEADS-1;i++){
+      const a=beadPositions[i], b=beadPositions[i+1];
+      ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y);
+      ctx.strokeStyle='rgba(0,200,255,0.35)';
+      ctx.lineWidth=2; ctx.shadowBlur=0; ctx.stroke();
+      // double bond every 3
+      if(i%3===1){
+        const dx=b.x-a.x, dy=b.y-a.y;
+        const len=Math.sqrt(dx*dx+dy*dy);
+        const ox=-dy/len*4, oy=dx/len*4;
+        ctx.beginPath(); ctx.moveTo(a.x+ox,a.y+oy); ctx.lineTo(b.x+ox,b.y+oy);
+        ctx.strokeStyle='rgba(0,200,255,0.18)';
+        ctx.lineWidth=1.5; ctx.stroke();
+      }
+    }
+
+    // beads
+    beadPositions.forEach((b,i)=>{
+      const pulse=0.85+0.15*Math.sin(t*0.04+i*0.6);
+      const r=10*pulse;
+      // glow ring
+      ctx.beginPath(); ctx.arc(b.x,b.y,r+4,0,Math.PI*2);
+      ctx.fillStyle=b.color.replace(')',',0.08)').replace('rgb','rgba');
+      ctx.shadowColor=b.color; ctx.shadowBlur=12; ctx.fill();
+      // bead
+      ctx.beginPath(); ctx.arc(b.x,b.y,r,0,Math.PI*2);
+      ctx.fillStyle=b.color+'22';
+      ctx.strokeStyle=b.color;
+      ctx.lineWidth=1.8; ctx.shadowColor=b.color; ctx.shadowBlur=10;
+      ctx.fill(); ctx.stroke();
+      // label
+      ctx.shadowBlur=0;
+      ctx.font='bold 7px "Space Mono",monospace';
+      ctx.fillStyle=b.color;
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(b.label,b.x,b.y);
+    });
+
+    // floating label
+    ctx.shadowBlur=0;
+    ctx.font='bold 10px "Space Mono",monospace';
+    ctx.fillStyle='rgba(0,200,255,0.4)';
+    ctx.textAlign='center'; ctx.textBaseline='alphabetic';
+    ctx.fillText('AMINO ACID CHAIN', cx, H*0.88);
+
+    t++;
+    animFrame=requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// TRIPLE CLOSE ANIMATION - all three existing animations stacked
+function runTriple(canvas){
+  const ctx=canvas.getContext('2d');
+  const W=canvas.width, H=canvas.height;
+  const SH=H/3;
+  let t=0;
+
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    ctx.setLineDash([]);
+
+    // ── SECTION 1: Lock & Key (top third) ──
+    ctx.save();
+    ctx.beginPath(); ctx.rect(0,0,W,SH); ctx.clip();
+
+    const cx1=W/2, cy1=SH/2;
+    const wave=Math.sin(t*0.022);
+    const inserted=Math.min(1,Math.max(0,(wave+1)/2));
+    const unlocked=wave>0.6;
+    const keyX=cx1-78+inserted*56;
+
+    // key
+    ctx.save();
+    ctx.translate(keyX, cy1+4);
+    ctx.shadowColor='#39ff14'; ctx.shadowBlur=14;
+    ctx.beginPath(); ctx.arc(-36,0,14,0,Math.PI*2);
+    ctx.strokeStyle='#39ff14'; ctx.lineWidth=2.8; ctx.stroke();
+    ctx.beginPath(); ctx.arc(-36,0,6,0,Math.PI*2);
+    ctx.strokeStyle='rgba(57,255,20,0.4)'; ctx.lineWidth=2; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-22,0); ctx.lineTo(24,0);
+    ctx.strokeStyle='#39ff14'; ctx.lineWidth=3.5; ctx.stroke();
+    [[8,9],[15,13],[21,7]].forEach(([x,h])=>{
+      ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,h);
+      ctx.strokeStyle='#39ff14'; ctx.lineWidth=3; ctx.stroke();
+    });
+    ctx.restore();
+
+    // lock
+    const lx1=cx1+58;
+    ctx.save();
+    ctx.translate(lx1, cy1);
+    ctx.shadowColor='#39ff14'; ctx.shadowBlur=unlocked?26:8;
+    const lift=unlocked?-13:0;
+    ctx.beginPath(); ctx.arc(0,-15+lift/2,12,Math.PI,0);
+    ctx.strokeStyle=`rgba(57,255,20,${0.3+inserted*0.6})`; ctx.lineWidth=3.2; ctx.stroke();
+    if(!unlocked){
+      ctx.beginPath(); ctx.moveTo(-12,-15); ctx.lineTo(-12,-6);
+      ctx.moveTo(12,-15); ctx.lineTo(12,-6);
+      ctx.strokeStyle=`rgba(57,255,20,${0.3+inserted*0.6})`; ctx.lineWidth=3.2; ctx.stroke();
+    }
+    ctx.beginPath(); ctx.roundRect(-21,-7,42,34,5);
+    ctx.fillStyle=`rgba(57,255,20,${unlocked?0.14:0.05})`;
+    ctx.strokeStyle=`rgba(57,255,20,${0.3+inserted*0.6})`; ctx.lineWidth=2.2;
+    ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.arc(0,5,5.5,0,Math.PI*2);
+    ctx.fillStyle=`rgba(57,255,20,${0.15+inserted*0.5})`; ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-2.5,8); ctx.lineTo(2.5,8); ctx.lineTo(2,16); ctx.lineTo(-2,16);
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+
+    ctx.shadowBlur=0;
+    ctx.font='700 9px "Space Mono",monospace';
+    ctx.fillStyle='rgba(57,255,20,0.5)';
+    ctx.textAlign='center';
+    ctx.fillText(unlocked?'RECEPTOR ACTIVATED':'METABOLIC BINDING', cx1, SH-8);
+    ctx.restore();
+
+    // divider 1
+    ctx.beginPath(); ctx.moveTo(W*0.08,SH); ctx.lineTo(W*0.92,SH);
+    ctx.strokeStyle='rgba(255,255,255,0.09)'; ctx.lineWidth=1; ctx.stroke();
+
+    // ── SECTION 2: Blood Vessels (middle third) ──
+    ctx.save();
+    ctx.beginPath(); ctx.rect(0,SH,W,SH); ctx.clip();
+
+    const cx2=W/2, cy2=SH+SH/2+8;
+    const pulse2=0.6+0.4*Math.sin(t*0.08);
+    ctx.beginPath(); ctx.arc(cx2,cy2,6*pulse2,0,Math.PI*2);
+    ctx.fillStyle='rgba(255,107,53,0.95)';
+    ctx.shadowColor='#ff6b35'; ctx.shadowBlur=18; ctx.fill();
+
+    function branch2(x,y,angle,length,depth){
+      if(depth>5||length<5) return;
+      const growDelay=depth*20;
+      const progress=Math.min(1,Math.max(0,(t-growDelay)/55));
+      if(progress<=0) return;
+      const ex=x+Math.cos(angle)*length*progress;
+      const ey=y+Math.sin(angle)*length*progress;
+      // clamp inside section
+      const clampedEy=Math.max(SH+2,Math.min(SH*2-2,ey));
+      const pulse=0.55+0.45*Math.sin(t*0.07+depth*0.8);
+      const alpha=progress*(0.45+0.45*pulse);
+      const lw=Math.max(0.5,3.5-depth*0.55);
+      ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(ex,clampedEy);
+      ctx.strokeStyle=`rgba(255,107,53,${alpha})`;
+      ctx.lineWidth=lw; ctx.shadowColor='#ff6b35'; ctx.shadowBlur=lw*2.5; ctx.stroke();
+      if(progress>=1){
+        branch2(ex,clampedEy,angle-0.42,length*0.68,depth+1);
+        branch2(ex,clampedEy,angle+0.48,length*0.64,depth+1);
+      }
+    }
+
+    [[-Math.PI/2,44],[Math.PI/6,42],[-Math.PI*5/6,42],
+     [Math.PI/2,38],[-Math.PI/6,42],[Math.PI*5/6,42],
+     [-Math.PI/3,40],[Math.PI/3,40]].forEach(([a,l])=>branch2(cx2,cy2,a,l,0));
+
+    ctx.shadowBlur=0;
+    ctx.font='700 9px "Space Mono",monospace';
+    ctx.fillStyle='rgba(255,107,53,0.5)';
+    ctx.textAlign='center';
+    ctx.fillText('ANGIOGENESIS', cx2, SH*2-8);
+    ctx.restore();
+
+    // divider 2
+    ctx.beginPath(); ctx.moveTo(W*0.08,SH*2); ctx.lineTo(W*0.92,SH*2);
+    ctx.strokeStyle='rgba(255,255,255,0.09)'; ctx.lineWidth=1; ctx.stroke();
+
+    // ── SECTION 3: Skin Repair (bottom third) ──
+    ctx.save();
+    ctx.beginPath(); ctx.rect(0,SH*2,W,SH); ctx.clip();
+
+    const cx3=W/2;
+    const cycle=((t%300)/300);
+    const repair=Math.min(1,cycle*2.2);
+    const isRepaired=cycle>0.5;
+
+    // surface line
+    ctx.beginPath();
+    ctx.moveTo(W*0.08, SH*2+SH*0.22);
+    for(let x=W*0.08;x<=W*0.92;x+=2){
+      const roughness=isRepaired
+        ? Math.sin(x*0.15)*1.5*(1-Math.min(1,repair*0.95))
+        : Math.sin(x*0.11)*5.5+Math.sin(x*0.29)*3;
+      ctx.lineTo(x, SH*2+SH*0.22+roughness);
+    }
+    ctx.strokeStyle=`rgba(191,95,255,${0.45+repair*0.45})`;
+    ctx.lineWidth=2.5; ctx.shadowColor='#bf5fff'; ctx.shadowBlur=repair*14; ctx.stroke();
+
+    ctx.shadowBlur=0;
+    ctx.font='700 8px "Space Mono",monospace';
+    ctx.fillStyle='rgba(191,95,255,0.4)';
+    ctx.textAlign='left';
+    ctx.fillText('EPIDERMIS', W*0.08, SH*2+SH*0.16);
+
+    // dermis divider
+    ctx.beginPath();
+    ctx.moveTo(W*0.08,SH*2+SH*0.52); ctx.lineTo(W*0.92,SH*2+SH*0.52);
+    ctx.strokeStyle='rgba(191,95,255,0.2)'; ctx.lineWidth=1; ctx.shadowBlur=0; ctx.stroke();
+    ctx.fillStyle='rgba(191,95,255,0.35)';
+    ctx.fillText('DERMIS', W*0.08, SH*2+SH*0.48);
+
+    // collagen fibers
+    const nf=Math.floor(repair*14);
+    for(let i=0;i<nf;i++){
+      const fx=W*0.1+i*(W*0.8/14);
+      const fa=Math.min(1,(repair*14-i)*0.5)*0.75;
+      const fh=SH*0.07+repair*SH*0.14;
+      ctx.beginPath();
+      ctx.moveTo(fx,SH*2+SH*0.52);
+      ctx.bezierCurveTo(fx-7,SH*2+SH*0.52-fh/2,fx+7,SH*2+SH*0.52-fh/2,fx,SH*2+SH*0.52-fh);
+      ctx.strokeStyle=`rgba(191,95,255,${fa})`;
+      ctx.lineWidth=1.8; ctx.shadowColor='#bf5fff'; ctx.shadowBlur=fa*10; ctx.stroke();
+    }
+    ctx.shadowBlur=0;
+    ctx.fillStyle=`rgba(191,95,255,${repair*0.55})`;
+    ctx.fillText('COLLAGEN', W*0.08, SH*2+SH*0.76);
+
+    // GHK-Cu particles
+    for(let i=0;i<7;i++){
+      const spd=(i%3+1)*0.5;
+      const px=W*0.12+i*(W*0.76/6);
+      const py=SH*2+SH*0.8-((t*spd+i*50)%200)/200*(SH*0.52);
+      const pa=Math.sin(((t*spd+i*50)%200)/200*Math.PI)*0.85;
+      ctx.beginPath(); ctx.arc(px,py,2.5,0,Math.PI*2);
+      ctx.fillStyle=`rgba(191,95,255,${pa})`;
+      ctx.shadowColor='#bf5fff'; ctx.shadowBlur=8; ctx.fill();
+    }
+
+    ctx.shadowBlur=0;
+    ctx.textAlign='center';
+    ctx.font='700 9px "Space Mono",monospace';
+    ctx.fillStyle='rgba(191,95,255,0.5)';
+    ctx.fillText(isRepaired?'CELLS REBUILDING':'GHK-Cu BINDING', cx3, SH*3-8);
+    ctx.restore();
+
+    t++;
+    animFrame=requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// ANIM MANAGER
+function stopAnim(){ if(animFrame){ cancelAnimationFrame(animFrame); animFrame=null; } }
+
+function startAnim(type){
+  stopAnim();
+  const col=document.getElementById('anim-col');
+  col.innerHTML='';
+  if(!type) return;
+  const wrap=document.createElement('div'); wrap.className='anim-wrap';
+  const canvas=document.createElement('canvas');
+  canvas.width=280;
+  canvas.height=type==='triple'?380:280;
+  wrap.appendChild(canvas); col.appendChild(wrap);
+  if(type==='peptidechain') runPeptideChain(canvas);
+  else if(type==='lockkey') runLockKey(canvas);
+  else if(type==='vessels') runVessels(canvas);
+  else if(type==='skin') runSkin(canvas);
+  else if(type==='triple') runTriple(canvas);
+}
+
+// RENDER
+function render(){
+  const s=slides[current];
+  document.getElementById('app').style.background=s.bg;
+  document.getElementById('glow1').style.background='radial-gradient(ellipse 60% 50% at 15% 60%,'+s.glow+'18 0%,transparent 70%)';
+  document.getElementById('glow2').style.background='radial-gradient(ellipse 40% 40% at 85% 30%,'+s.glow+'0d 0%,transparent 70%)';
+  const deco=document.getElementById('deco'); deco.textContent=s.symbol; deco.style.color=s.glow;
+
+  const dotsEl=document.getElementById('dots'); dotsEl.innerHTML='';
+  slides.forEach((_,i)=>{
+    const d=document.createElement('div'); d.className='dot';
+    d.style.width=i===current?'28px':'8px';
+    d.style.background=i===current?s.glow:'rgba(255,255,255,0.2)';
+    d.onclick=()=>goTo(i); dotsEl.appendChild(d);
+  });
+
+  document.getElementById('tag-line').style.background=s.glow;
+  document.getElementById('tag-label').textContent=s.tag;
+  document.getElementById('tag-label').style.color=s.glow;
+  document.getElementById('tag-time').textContent='· '+s.time;
+  document.getElementById('headline').textContent=s.headline;
+  document.getElementById('sub').textContent=s.sub;
+  document.getElementById('sub').style.color=s.accent;
+  document.getElementById('divider').style.background='linear-gradient(90deg,'+s.glow+',transparent)';
+
+  const chipsEl=document.getElementById('chips'); chipsEl.innerHTML='';
+  s.detail.forEach(chip=>{ const c=document.createElement('span'); c.className='chip'; c.textContent=chip; chipsEl.appendChild(c); });
+  chipsEl.style.marginBottom=(s.facts.length||s.stat)?'16px':'0';
+
+  const factsEl=document.getElementById('facts'); factsEl.innerHTML='';
+  s.facts.forEach(fact=>{
+    const row=document.createElement('div'); row.className='fact-row';
+    const dot=document.createElement('div'); dot.className='fact-dot'; dot.style.background=s.glow;
+    const text=document.createElement('div'); text.className='fact-text'; text.textContent=fact;
+    row.appendChild(dot); row.appendChild(text); factsEl.appendChild(row);
+  });
+  factsEl.style.display=s.facts.length?'flex':'none';
+
+  const sb=document.getElementById('stat-block');
+  if(s.stat){
+    sb.style.display='flex'; sb.style.borderLeft='3px solid '+s.glow; sb.style.background=s.glow+'0a';
+    document.getElementById('stat-text').textContent=s.stat;
+    document.getElementById('stat-src').textContent=s.statSrc;
+    document.getElementById('stat-src').style.color=s.glow;
+  } else { sb.style.display='none'; }
+
+  document.getElementById('progress-fill').style.background=s.glow;
+  document.getElementById('progress-fill').style.boxShadow='0 0 6px '+s.glow+'88';
+  document.getElementById('prev-btn').disabled=current===0;
+  document.getElementById('next-btn').disabled=current===slides.length-1;
+  document.getElementById('anim-col').style.display=s.animType?'flex':'none';
+
+  startAnim(s.animType);
+  updateMainBtn();
+}
+
+function updateTimers(){
+  const s=slides[current];
+  const urgent=slideTime<=10&&started;
+  const st=document.getElementById('slide-timer');
+  st.textContent=fmt(slideTime); st.style.color=urgent?'#ff5555':s.glow;
+  st.style.animation=urgent?'blink .5s ease infinite':'none';
+  const tt=document.getElementById('total-timer');
+  tt.textContent=fmt(totalTime); tt.style.color=totalTime<=30?'#ff5555':'rgba(255,255,255,0.5)';
+  tt.style.animation=totalTime<=30?'blink .8s ease infinite':'none';
+  document.getElementById('progress-fill').style.width=((s.duration-slideTime)/s.duration*100)+'%';
+}
+
+function updateMainBtn(){
+  const s=slides[current]; const btn=document.getElementById('main-btn');
+  if(!started){ btn.textContent='START'; btn.style.background=s.glow+'22'; btn.style.border='1px solid '+s.glow+'66'; btn.style.color=s.glow; }
+  else { btn.textContent=running?'PAUSE':'RESUME'; btn.style.background=running?s.glow+'22':'rgba(255,255,255,0.05)'; btn.style.border=running?'1px solid '+s.glow+'66':'1px solid rgba(255,255,255,0.15)'; btn.style.color=running?s.glow:'rgba(255,255,255,0.4)'; }
+}
+
+function tick(){
+  slideTime--; totalTime=Math.max(0,totalTime-1);
+  if(slideTime<=0){
+    if(current<slides.length-1){ current++; slideTime=slides[current].duration; render(); }
+    else { running=false; clearInterval(interval); interval=null; updateMainBtn(); }
+  }
+  updateTimers();
+}
+
+function startTimer(){ if(interval) clearInterval(interval); interval=setInterval(tick,1000); }
+
+function mainAction(){
+  if(!started){ started=true; running=true; startTimer(); }
+  else { running=!running; if(running) startTimer(); else{ clearInterval(interval); interval=null; } }
+  updateMainBtn(); updateTimers();
+}
+
+function goTo(i){ stopAnim(); current=i; slideTime=slides[i].duration; render(); updateTimers(); }
+function prevSlide(){ if(current>0) goTo(current-1); }
+function nextSlide(){ if(current<slides.length-1) goTo(current+1); }
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight'||e.key===' '){ e.preventDefault(); nextSlide(); }
+  if(e.key==='ArrowLeft') prevSlide();
+  if(e.key==='Enter'&&!started) mainAction();
+});
+
+render(); updateTimers();
+</script>
+</body>
+</html>
